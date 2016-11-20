@@ -1,0 +1,134 @@
+package hw5;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import hw4.Graph;
+
+public class MarvelPaths {
+	private Graph<String, String> myGraph;
+	
+	public MarvelPaths() {
+		myGraph = new Graph<String, String>();
+	}
+	
+	public Graph<String, String> getGraph() {
+		return myGraph;
+	}
+	
+	public void createNewGraph(String filename) {
+		try {
+			Map<String, Set<String>> charsInBooks = new HashMap<String,Set<String>>();
+			Set<String> chars = new HashSet<String>();
+			MarvelParser.readData(filename,charsInBooks,chars);
+		    for (Map.Entry<String, Set<String>> entry : charsInBooks.entrySet()) {
+		    		/* by using the book map and character set to 
+		    		 * put all the node and edge into the graph ADT
+		    		 */
+		    	String tempKey = entry.getKey();
+		    	Set<String> tempValue = entry.getValue();
+		    	for (String i : tempValue) {
+		    		if (!myGraph.hasNode(i)) {
+		    			myGraph.addNode(i);
+		    		}
+		    		for (String j : tempValue) {
+						if (j != i) {
+							myGraph.addEdge(i, j, tempKey);
+						}
+		    		}
+		    	}
+			}
+		} catch (IOException e) {
+    		e.printStackTrace();
+		}
+    }
+    
+    public String findPath(String start, String dest) {
+    	// edge cases that one of them or both are unknown character in the graph
+		if (!(myGraph.hasNode(start))) {
+			if (!(myGraph.hasNode(dest))) {
+				if (start == dest) {
+					return ("unknown character " + start + "\n");
+				} else {
+					return ("unknown character " + start + "\n" +"unknown character " + dest + "\n");
+				}
+			} else {
+				return ("unknown character " + start + "\n");
+			}
+		} else {
+			if (!(myGraph.hasNode(dest))) {
+				return ("unknown character " + dest + "\n");
+			}
+		}
+		//algorithm
+	/*  start = starting node
+    dest = destination node
+    Q = queue, or "worklist", of nodes to visit: initially empty
+    M = map from nodes to paths: initially empty.
+        // Each key in M is a visited node.
+        // Each value is a path from start to that node.
+        // A path is a list; you decide whether it is a list of nodes, or edges,
+        // or node data, or edge data, or nodes and edges, or something else.
+    
+    Add start to Q
+    Add start->[] to M (start mapped to an empty list)
+    while Q is not empty:
+        dequeue next node n
+        if n is dest
+            return the path associated with n in M
+        for each edge e=(n,m):
+            if m is not in M, i.e. m has not been visited:
+                let p be the path n maps to in M
+                let p' be the path formed by appending e to p
+                add m->p' to M
+                add m to Q
+            
+    If the loop terminates, then no path exists from start to dest.
+    The implementation should indicate this to the client.
+    */
+		String answer = "path from " + start + " to " + dest + ":\n";
+		List<String> queue = new ArrayList<String> ();
+	    Map<String, List<String>> M = new HashMap<String, List<String>> ();
+	    queue.add(start);
+	    M.put(start, new ArrayList<String> ());
+	    while (!(queue.isEmpty())) {
+	    	String temp = queue.get(0);
+	    	queue.remove(0);
+	    	if (temp == dest) {
+	    		List<String> p = M.get(temp);
+	    		for (int i = 0; i < p.size() - 1; i++) {
+	    	    	answer = answer + p.get(i) +" to " + p.get(i+1) + " via " + myGraph.getEdge(p.get(i), p.get(i+1)) + "\n";
+	    	    }
+	    		return answer;
+	    	}
+	    	Set<String> tempChildren = new HashSet<String> ();
+	    	int tempNum = 0;
+	    	for (int i = 0; i < (myGraph.getParent()).size(); i++) {
+	    		if ((myGraph.getParent()).get(i) == temp) {
+	    			tempNum = i;
+	    		}
+	    	}
+	    	List<String> tempC = (myGraph.getAdjList()).get(tempNum);
+	    	for (int i = 0; i < tempC.size(); i++) {
+	    		tempChildren.add(tempC.get(i));
+	    	}
+	    	for (String child : tempChildren) {
+	    		if (!(M.containsKey(child))) {
+	    			List<String> p = M.get(temp);
+	    			List<String> p2 = new ArrayList<String> (p);
+	    			p2.add(child);
+	    			M.put(child,p2);
+	    			queue.add(child);
+	    		}
+	    	}
+	    }
+	    // if the dest is not in the map, there is no path found
+	    answer = answer + "no path found\n";
+	    return answer;
+    }
+}
