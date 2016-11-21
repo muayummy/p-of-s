@@ -1,0 +1,154 @@
+package hw6;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Set;
+
+import hw4.Graph;
+import hw5.MarvelParser;
+
+public class MarvelPaths2 {
+	private Graph<String, Double> myGraph2;
+	
+	public MarvelPaths2() {
+		myGraph2 = new Graph<String, Double> ();
+	}
+	
+	public Graph<String, Double> getGraph() {
+		return myGraph2;
+	}
+	
+	/*
+	 * This Function Basically returns a Hashmap that contains the inverse weighted value for each
+	 * parent node and its child node, you can easily get the value of
+	 */
+	public HashMap<String, HashMap<String, Integer>> WeightedBookMap(Map<String, Set<String>> b) {
+		HashMap<String, HashMap<String, Integer>> tempG = new HashMap<String, HashMap<String, Integer>> ();
+		for (Set<String> book : b.values()) {
+			for (String b1 : book) {
+				if (!tempG.containsKey(b1)) {
+					tempG.put(b1, new HashMap<String, Integer>());
+				}
+				for (String b2 : book) {
+					if (b1.equals(b2)) {
+						continue;
+					}
+					if (!tempG.get(b1).containsKey(b2)) {
+						tempG.get(b1).put(b2, 1);
+					} else {
+						tempG.get(b1).put(b2, tempG.get(b1).get(b2)+1);
+					}
+				}
+			}
+		}
+		return tempG;
+	}
+	
+	public void createNewGraph(String filename) {
+		// use try and catch block for the readData function
+		try {
+			Map<String, Set<String>> charsInBooks = new HashMap<String,Set<String>>();
+			Set<String> chars = new HashSet<String>();
+			MarvelParser.readData(filename,charsInBooks,chars);
+			HashMap<String, HashMap<String, Integer>> WeightedMap = WeightedBookMap(charsInBooks);
+			for (String node1 : WeightedMap.keySet()) {
+				HashMap<String, Integer> childList = WeightedMap.get(node1);
+				if (!(myGraph2.hasNode(node1))) {
+					myGraph2.addNode(node1);
+				}
+				for (String node2 : childList.keySet()) {
+					int num = childList.get(node2);
+					myGraph2.addEdge(node1, node2, 1.00/num);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public String findPath(String start, String dest) {
+		String answer = "Path from " + start + " to " + dest + ":\n";
+		PriorityQueue<ArrayList<String>> active = new PriorityQueue<ArrayList<String>> (new Comparator<ArrayList<String>>() {
+			public int compare(ArrayList<String> p1, ArrayList<String> p2) {
+				double w1 = 0;
+				double w2 = 0;
+				for (int i = 0; i < p1.size() - 1; i++) {
+					if (p1.size() == 1) {
+						w1 = 0;
+						break;
+					}
+					double temp = 0;
+					temp = myGraph2.getEdge(p1.get(i), p1.get(i+1));
+					w1 = w1 + temp;
+				}
+				for (int i = 0; i < p2.size() - 1; i++) {
+					if (p2.size() == 1) {
+						w2 = 0;
+						break;
+					}
+					double temp = 0;
+					temp = myGraph2.getEdge(p2.get(i), p2.get(i+1));
+					w2 = w2 + temp;
+				}
+				if (w1 > w2) {
+					return 1;
+				}
+				if (w1 < w2) {
+					return -1;
+				}
+				return p1.size() - p2.size();
+			}
+		});	
+		Set<String> finished = new HashSet<String> ();
+		ArrayList<String> firstNode = new ArrayList<String> ();
+		firstNode.add(start);
+		active.add(firstNode);
+		while(!active.isEmpty()) {
+			ArrayList<String> minPath = active.poll();
+			String minDest = minPath.get(minPath.size()-1);
+			if (minDest.equals(dest)) {
+				double totalW = 0;
+				for (int i = 0; i < minPath.size() - 1; i++) {
+					answer = answer + minPath.get(i) + " to " + minPath.get(i+1) + " with ";
+					double tempV = myGraph2.getEdge(minPath.get(i), minPath.get(i+1));
+					totalW = totalW + tempV;
+					answer = answer + String.format("weight %.3f:", tempV) + "\n";
+				}
+				answer = answer + String.format("total cost: %.3f", totalW);
+				return answer;
+			}
+			if (finished.contains(minDest)) {
+				continue;
+			}
+			List<String> children = new ArrayList<String> ();
+			/*
+			int index1 = myGraph2.getParent().indexOf(minDest);
+			if (index1 != -1) {
+				children = myGraph2.getChildList().get(index1);
+			}
+			*/
+			for (int i = 0; i < myGraph2.getParent().size(); i++) {
+				if ((myGraph2.getParent().get(i)).equals(minDest)) {
+					children = myGraph2.getChildList().get(i);
+				}
+			}
+			Set<String> childrens = new HashSet<String> (children);
+			for (String i : childrens) {
+				if(!finished.contains(i)) {
+					ArrayList<String> newPath = new ArrayList<String> (minPath);
+					newPath.add(i);
+					active.add(newPath);
+				}
+			}
+			finished.add(minDest);
+		}
+		answer = answer + "no path found";
+		return answer;
+	}
+}
